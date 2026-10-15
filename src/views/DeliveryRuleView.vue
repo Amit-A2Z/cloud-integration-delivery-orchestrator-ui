@@ -15,11 +15,11 @@
                 style="width: 100%;"
             />
 
-            <ui5-text style="font-weight: bold;">Version Pattern (regex):</ui5-text>
+            <ui5-text style="font-weight: bold;">Version Pattern (glob):</ui5-text>
             <ui5-input
                 :value="selDeliveryRule.VersionPattern || ''"
                 @change="selDeliveryRule.VersionPattern = $event.target.value"
-                placeholder="e.g. 5.2.*, 6,2,*"
+                placeholder="e.g. 5.2.*, 5.*.*, *.*.*"
                 style="width: 100%;"
             />
 
