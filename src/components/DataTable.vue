@@ -133,14 +133,12 @@ export default defineComponent({
       }
     })
     const checkedRowKeysRef: any[] = []
-    const checkedRows: any[] = []
     const disableButton = true
     const tableWidth = '100%'
     return {
       rowProps,
       disableButton,
       checkedRowKeysRef,
-      checkedRows,
       paginationReactive,
       tableWidth
     }
@@ -199,7 +197,6 @@ export default defineComponent({
       const rowData = this.data[rowKey];
 
       this.checkedRowKeysRef = [rowKey];
-      this.checkedRows = [rowData];
       this.$emit('update:checkRows', this.checkedRows);
     },
     handleInputSearch(v: string) {
@@ -242,6 +239,11 @@ export default defineComponent({
   },
   emits: ['update:checkRows', 'update:edit', 'loadMore'],
   computed: {
+    checkedRows(): any[] {
+      return this.checkedRowKeysRef
+        .map((key: any) => this.data[key])
+        .filter(Boolean)
+    },
     counts() {
       return this.data.length
     },
