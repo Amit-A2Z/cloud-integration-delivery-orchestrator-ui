@@ -509,7 +509,7 @@ import {
     DeleteCpiTenant, GetCpiTenants, UpsertCpiTenant,
     SaveCfIdentity, ListCfOrgs, ListCfSpaces, ExchangeCfPasscode,
     PreviewBootstrap, ApplyBootstrap, GetBootstrapStatus, RetryBootstrap, ResetBootstrap,
-    RegisterTmsNode, GetTmsNodeRoutes, ConfirmTmsRoutes,
+    SelectTmsNode, GetTmsExtensionRoutes, ConfirmTmsExtensionRoutes,
     GetCentralTmsContext, GetTransportNodes,
 } from '@/service/api'
 import type {
@@ -945,7 +945,7 @@ export default defineComponent({
         async loadRoutes() {
             if (!this.selectedCpiTenant.ID) return
             try {
-                const res = await GetTmsNodeRoutes(this.selectedCpiTenant.ID)
+                const res = await GetTmsExtensionRoutes(this.selectedCpiTenant.ID)
                 this.tmsRoutes = res.routes || []
             } catch {
                 this.tmsRoutes = []
@@ -969,7 +969,7 @@ export default defineComponent({
             this.tmsLoading = true
             this.step2Message = null
             try {
-                await RegisterTmsNode(this.selectedCpiTenant.ID, { nodeId: this.selectedTmsNode.id, nodeName: this.selectedTmsNode.name })
+                await SelectTmsNode(this.selectedCpiTenant.ID, { nodeId: this.selectedTmsNode.id, nodeName: this.selectedTmsNode.name })
                 await this.refresh()
                 const updated = this.cpiTenants.find(t => t.ID === this.selectedCpiTenant.ID)
                 if (updated) this.selectedCpiTenant = { ...updated }
@@ -986,7 +986,7 @@ export default defineComponent({
             this.tmsLoading = true
             this.step2Message = null
             try {
-                const res = await ConfirmTmsRoutes(this.selectedCpiTenant.ID)
+                const res = await ConfirmTmsExtensionRoutes(this.selectedCpiTenant.ID)
                 this.tmsRoutes = res.routes || []
                 await this.refresh()
                 const updated = this.cpiTenants.find(t => t.ID === this.selectedCpiTenant.ID)

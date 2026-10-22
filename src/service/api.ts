@@ -1,6 +1,6 @@
 import axios from 'axios'
 import http from './http'
-import type { AnsStatus, ApiEndpoint, Artifact, ArtifactTenantOperation, AppCount, BackfillTechIDResult, BootstrapJob, BootstrapPreview, CentralTmsContext, ConnectivityStatus, CpiTenant, CreateDRFromMismatchRequest, CreateDRFromMismatchResponse, DeliverOpRequest, DeliveryRequest, DeliveryRule, GenerateTRResponse, GitOwnerInfo, GitRepoConfig, GitRepoInfo, JiraConfig, NodeTransportRequest, OperationCondition, OperationsHistoryFilters, OperationsHistoryResponse, Package, PreviewDRResponse, RuntimeArtifact, TmsNodeConfirmResponse, TmsRoutesResponse, TransportNode, TransportRoute, TriggerResult, UserInfo, VersionCompareIncludedPackage, VersionCompareResponse, VersionCompareSummaryItem } from './model'
+import type { AnsStatus, ApiEndpoint, Artifact, ArtifactTenantOperation, AppCount, BackfillTechIDResult, BootstrapJob, BootstrapPreview, CentralTmsContext, ConnectivityStatus, CpiTenant, CreateDRFromMismatchRequest, CreateDRFromMismatchResponse, DeliverOpRequest, DeliveryRequest, DeliveryRule, GenerateTRResponse, GitOwnerInfo, GitRepoConfig, GitRepoInfo, JiraConfig, NodeTransportRequest, OperationCondition, OperationsHistoryFilters, OperationsHistoryResponse, Package, PreviewDRResponse, RuntimeArtifact, TmsConfirmResponse, TmsExtensionOverview, TmsRoutesResponse, TransportNode, TransportRoute, TriggerResult, UserInfo, VersionCompareIncludedPackage, VersionCompareResponse, VersionCompareSummaryItem } from './model'
 import type { AggregateStatus, DeployState, ImportState, RequestState } from './statuses'
 
 export const GetDrCounts = () => {
@@ -307,18 +307,34 @@ export const ResetBootstrap = (tenantId: number) => {
   return http.post(`/api/v1/cpiTenant/${tenantId}/bootstrap/reset`, {}) as Promise<{ tenantId: number }>
 }
 
-// --- TMS Node Registration ---
+// --- TMS Extension (RFC 032 P0) ---
 
-export const RegisterTmsNode = (tenantId: number, payload: { nodeId: number; nodeName: string }) => {
-  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-node/register`, payload) as Promise<void>
+export const GetTmsExtension = (tenantId: number) => {
+  return http.get(`/api/v1/cpiTenant/${tenantId}/tms-extension`) as Promise<TmsExtensionOverview>
 }
 
-export const GetTmsNodeRoutes = (tenantId: number) => {
-  return http.get(`/api/v1/cpiTenant/${tenantId}/tms-node/routes`) as Promise<TmsRoutesResponse>
+export const SelectTmsNode = (tenantId: number, payload: { nodeId: number; nodeName: string }) => {
+  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/node`, payload) as Promise<void>
 }
 
-export const ConfirmTmsRoutes = (tenantId: number) => {
-  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-node/confirm`, {}) as Promise<TmsNodeConfirmResponse>
+export const GetTmsExtensionRoutes = (tenantId: number) => {
+  return http.get(`/api/v1/cpiTenant/${tenantId}/tms-extension/routes`) as Promise<TmsRoutesResponse>
+}
+
+export const ConfirmTmsExtensionRoutes = (tenantId: number) => {
+  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/confirm`, {}) as Promise<TmsConfirmResponse>
+}
+
+export const PreviewTmsExtension = (tenantId: number, cfToken: string) => {
+  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/preview`, { cfToken }) as Promise<BootstrapPreview>
+}
+
+export const ApplyTmsExtension = (tenantId: number, cfToken: string) => {
+  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/apply`, { cfToken }) as Promise<{ jobId: number }>
+}
+
+export const ResetTmsExtension = (tenantId: number) => {
+  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/reset`, {}) as Promise<void>
 }
 
 // --- Central TMS Context ---
@@ -328,7 +344,7 @@ export const GetCentralTmsContext = () => {
 }
 
 export const UpsertCentralTmsContext = (payload: Partial<CentralTmsContext>) => {
-  return http.put('/api/v1/centralTmsContext', payload) as Promise<CentralTmsContext>
+  return http.put('/api/v1/centralTmsContext', payload) as Promise<CentralTmsContext & { affectedTenants: number }>
 }
 
 // --- Jira Config ---

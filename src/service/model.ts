@@ -83,38 +83,42 @@ export type PrerequisiteStatus = 'missing' | 'ready' | 'failed' | 'registering'
 export type BootstrapJobState = 'running' | 'waiting_user_action' | 'partially_applied' | 'failed' | 'finished'
 export type BootstrapJobType = 'preview' | 'apply' | 'retry'
 export type BootstrapFailureType = 'waiting_user_action' | 'permission_blocked' | 'remote_system_error' | 'config_mismatch' | ''
+export type BootstrapLayer = 'BASE' | 'TMS' | ''
+
+// RFC 032 P0: TMS Extension State
+export type TmsExtensionState = 'not_started' | 'node_pending' | 'node_confirmed' | 'bootstrapping' | 'bootstrapped' | 'bootstrap_failed'
 
 export interface CpiTenant {
   ID: number
   Name: string
   Group: string
 
-  // RFC-013: CF identity fields (required for bootstrap)
+  // CF identity fields
   CfApiEndpoint: string
   CfOrg: string
   CfSpace: string
 
-  // RFC-013: Bootstrap lifecycle
+  // Base bootstrap lifecycle
   LifecycleState: TenantLifecycleState
   BlockingReason: string
-
-  // RFC-013: Prerequisite status
   PirApiStatus: PrerequisiteStatus
+  PirApiDestinationName: string
+  PirApiUrl: string
+
+  // TMS extension (RFC 032 P0)
+  TmsExtensionState: TmsExtensionState
+  TmsBlockingReason: string
   CasApplicationStatus: PrerequisiteStatus
   CasStandardStatus: PrerequisiteStatus
   CloudIntegrationDestStatus: PrerequisiteStatus
   ContentAssemblyDestStatus: PrerequisiteStatus
   TransportManagementDestStatus: PrerequisiteStatus
-
-  // RFC-013: TMS Node registration
   TmsSourceNodeID: number
   TmsSourceNodeName: string
-  TmsNodeRegistrationStatus: PrerequisiteStatus
-
-  // RFC-013: Destination references
   CasEngineDestinationName: string
-  PirApiDestinationName: string
-  PirApiUrl: string
+
+  // Deprecated: superseded by TmsExtensionState
+  TmsNodeRegistrationStatus: PrerequisiteStatus
 
   CreatedAt: string
   UpdatedAt: string
@@ -142,6 +146,7 @@ export interface BootstrapJob {
   CreatedAt: string
   UpdatedAt: string
   CpiTenantID: number
+  Layer: BootstrapLayer
   JobType: BootstrapJobType
   State: BootstrapJobState
   CurrentStep: string
@@ -154,16 +159,30 @@ export interface BootstrapJob {
   EndedAt: string | null
 }
 
-// --- TMS Node registration types ---
+// --- TMS extension types (RFC 032 P0) ---
+
+export interface TmsExtensionOverview {
+  tmsExtensionState: TmsExtensionState
+  tmsBlockingReason: string
+  available: boolean
+  availabilityReason: string
+  nodeName: string
+  nodeId: number
+  casApplicationStatus: PrerequisiteStatus
+  casStandardStatus: PrerequisiteStatus
+  cloudIntegrationDestStatus: PrerequisiteStatus
+  contentAssemblyDestStatus: PrerequisiteStatus
+  transportManagementDestStatus: PrerequisiteStatus
+  latestJob: BootstrapJob | null
+}
 
 export interface TmsRoutesResponse {
   nodeName: string
   routes: TransportRoute[]
 }
 
-export interface TmsNodeConfirmResponse {
-  tenantId: number
-  tmsNodeRegistrationStatus: PrerequisiteStatus
+export interface TmsConfirmResponse {
+  tmsExtensionState: TmsExtensionState
   routes: TransportRoute[]
 }
 
