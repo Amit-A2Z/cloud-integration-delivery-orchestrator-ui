@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { GetDatabaseInfo, GetJiraConfig, UpdateJiraConfig, TestJiraConnection, GetAnsStatus, TestAnsConnection, GetCentralTmsContext, UpsertCentralTmsContext, GetCpiTenants } from '@/service/api'
 import type { ConnectivityStatus, JiraConfig, AnsStatus, CentralTmsContext, CpiTenant } from '@/service/model'
 import GitRepoConfigCard from '@/components/GitRepoConfigCard.vue'
@@ -58,13 +58,40 @@ const openTmsEditDialog = () => {
   showTmsEditDialog.value = true
 }
 
+// Count of tenants with TMS extension enabled (not_started excluded)
+const tmsBootstrappedCount = computed(() =>
+  tenants.value.filter(t => t.TmsExtensionState === 'bootstrapped').length
+)
+
+// Confirm dialog before saving TMS context (Rule 4: may invalidate bootstrapped tenants)
+const showTmsConfirmDialog = ref(false)
+
 const onSaveTmsContext = async () => {
   if (!tmsEditDestName.value.trim()) return
+  // If changing an existing destination name and there are bootstrapped tenants, confirm first
+  if (tmsContext.value?.TmsApiDestinationName
+      && tmsContext.value.TmsApiDestinationName !== tmsEditDestName.value.trim()
+      && tmsBootstrappedCount.value > 0) {
+    showTmsConfirmDialog.value = true
+    return
+  }
+  await doSaveTmsContext()
+}
+
+const doSaveTmsContext = async () => {
+  showTmsConfirmDialog.value = false
   tmsSaving.value = true
   try {
-    tmsContext.value = await UpsertCentralTmsContext({ TmsApiDestinationName: tmsEditDestName.value.trim() })
-    window.$toast.success('Central TMS context saved')
+    const result = await UpsertCentralTmsContext({ TmsApiDestinationName: tmsEditDestName.value.trim() })
+    tmsContext.value = result
+    const affected = (result as any).affectedTenants ?? 0
+    if (affected > 0) {
+      window.$toast.warning(`Central TMS context saved — ${affected} tenant(s) marked as TMS bootstrap_failed and need re-apply.`)
+    } else {
+      window.$toast.success('Central TMS context saved')
+    }
     showTmsEditDialog.value = false
+    await loadTenants()
   } catch {
     // Error displayed by http interceptor
   } finally {
@@ -214,6 +241,28 @@ onMounted(async () => {
     </ui5-toolbar>
   </ui5-dialog>
 
+  <!-- Confirm TMS Destination Change Dialog -->
+  <ui5-dialog
+    header-text="Confirm TMS Destination Change"
+    :open="showTmsConfirmDialog"
+    @before-close="showTmsConfirmDialog = false"
+    style="width: 32rem;">
+    <div class="sc-dialog-content">
+      <ui5-message-strip design="Critical" hide-close-button style="margin-bottom: 1rem;">
+        Changing the TMS API destination will invalidate {{ tmsBootstrappedCount }} TMS-ready tenant(s).
+        They will be marked as <strong>bootstrap_failed</strong> and must be re-applied individually.
+      </ui5-message-strip>
+      <ui5-text>
+        Current: <strong>{{ tmsContext?.TmsApiDestinationName }}</strong><br />
+        New: <strong>{{ tmsEditDestName.trim() }}</strong>
+      </ui5-text>
+    </div>
+    <ui5-toolbar slot="footer">
+      <ui5-toolbar-button design="Negative" text="Confirm Change" :disabled="tmsSaving" @click="doSaveTmsContext" />
+      <ui5-toolbar-button design="Transparent" text="Cancel" @click="showTmsConfirmDialog = false" />
+    </ui5-toolbar>
+  </ui5-dialog>
+
   <!-- Edit Jira Config Dialog -->
   <ui5-dialog
     header-text="Configure Jira Integration"
@@ -252,11 +301,11 @@ onMounted(async () => {
     </div>
 
     <!-- Central TMS -->
-    <ui5-panel header-text="Central TMS" fixed>
+    <ui5-panel header-text="TMS Extension · Global Configuration" fixed>
       <ui5-busy-indicator :active="tmsContextLoading" :delay="0" size="M" style="width: 100%;">
         <div class="panel-body">
           <ui5-message-strip v-if="!tmsContext?.TmsApiDestinationName && !tmsContextLoading" design="Critical" hide-close-button>
-            Central TMS is not configured. Bootstrap and transport request operations will be blocked. Click "Configure" to set the TMS API destination name.
+            Central TMS is not configured. TMS extension bootstrap will be blocked for all tenants. Click "Configure" to set the TMS API destination name.
           </ui5-message-strip>
           <div class="info-row">
             <div class="info-field">

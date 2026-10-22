@@ -6,40 +6,9 @@
         @close="closeManageModal"
         style="width: 64%; min-width: 680px;">
 
-        <ui5-tabcontainer>
+        <div class="tab-content">
 
-            <!-- ── Tab: Tenant Info (existing tenants only) ── -->
-            <ui5-tab v-if="selectedCpiTenant.ID" text="Tenant Info">
-                <div class="flex-vertical tab-content">
-                    <ui5-text class="field-label">Name</ui5-text>
-                    <ui5-input :value="selectedCpiTenant.Name || ''" @change="selectedCpiTenant.Name = $event.target.value"
-                        style="width: 100%;" />
-
-                    <ui5-text class="field-label">Tag</ui5-text>
-                    <ui5-input :value="selectedCpiTenant.Group || ''" @change="onSelectTag"
-                        placeholder="e.g. Dev, Test, Production" showSuggestions style="width: 100%;">
-                        <ui5-suggestion-item v-for="tag in tagOptions" :key="tag.value" :text="tag.value" />
-                    </ui5-input>
-
-                    <template v-if="selectedCpiTenant.PirApiUrl">
-                        <div class="section-divider" />
-                        <ui5-text class="field-label">PIR API URL</ui5-text>
-                        <ui5-link :href="selectedCpiTenant.PirApiUrl" target="_blank" style="font-size: 0.85rem; word-break: break-all;">
-                            {{ selectedCpiTenant.PirApiUrl }}
-                        </ui5-link>
-                    </template>
-
-                    <div style="padding-top: 1rem;">
-                        <ui5-button design="Emphasized" @click="onSave" :disabled="saving">Save</ui5-button>
-                    </div>
-                </div>
-            </ui5-tab>
-
-            <!-- ── Tab: Bootstrap ── -->
-            <ui5-tab text="Bootstrap">
-                <div class="tab-content">
-
-                    <!-- Lifecycle + BlockingReason -->
+                    <!-- Lifecycle + TMS Extension status -->
                     <div class="status-header">
                         <ui5-text style="font-weight: bold; font-size: 1rem;">Lifecycle</ui5-text>
                         <ui5-tag :design="lifecycleDesign" style="margin-left: 0.5rem;">
@@ -49,12 +18,19 @@
                             style="color: var(--sapCriticalTextColor); margin-left: 0.75rem; font-size: 0.8rem;">
                             {{ selectedCpiTenant.BlockingReason }}
                         </ui5-text>
+                        <span style="margin-left: 1.5rem;" />
+                        <ui5-text style="font-weight: bold; font-size: 1rem;">TMS</ui5-text>
+                        <ui5-tag :design="tmsExtensionDesign" style="margin-left: 0.5rem;">
+                            {{ selectedCpiTenant.TmsExtensionState || 'not_started' }}
+                        </ui5-tag>
+                        <ui5-text v-if="selectedCpiTenant.TmsBlockingReason"
+                            style="color: var(--sapCriticalTextColor); margin-left: 0.75rem; font-size: 0.8rem;">
+                            {{ selectedCpiTenant.TmsBlockingReason }}
+                        </ui5-text>
                     </div>
 
-                    <!-- ── Prerequisite grid — 3 groups ── -->
+                    <!-- ── Base Bootstrap Prerequisites (PIR only) ── -->
                     <div style="margin-bottom: 1rem;">
-
-                        <!-- Group 1: Provider-side Destinations (in cpi-delivery subaccount) -->
                         <div class="prereq-group-header">Provider Destinations <span class="prereq-group-note">(delivery-orchestrator subaccount)</span></div>
                         <div class="prereq-grid" style="margin-bottom: 0.5rem;">
                             <div class="prereq-item">
@@ -65,42 +41,22 @@
                                     {{ selectedCpiTenant.PirApiDestinationName || 'CPIDELIVERY_PIR_{id}' }}
                                 </ui5-text>
                             </div>
-                            <div class="prereq-item">
-                                <ui5-tag :design="selectedCpiTenant.CasEngineDestinationName ? 'Positive' : 'Neutral'" style="font-size: 0.7rem; min-width: 64px;">
-                                    {{ selectedCpiTenant.CasEngineDestinationName ? 'ready' : 'missing' }}
-                                </ui5-tag>
-                                <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">
-                                    {{ selectedCpiTenant.CasEngineDestinationName || 'CPIDELIVERY_CAS_{id}' }}
-                                </ui5-text>
-                            </div>
                         </div>
 
-                        <!-- Group 2: Subscriber Service Instances -->
                         <div class="prereq-group-header">Subscriber Service Instances <span class="prereq-group-note">(CPI tenant subaccount)</span></div>
-                        <div class="prereq-grid" style="margin-bottom: 0.5rem;">
-                            <div v-for="p in subscriberInstanceStatuses" :key="p.key" class="prereq-item">
-                                <ui5-tag :design="prereqDesign(p.value)" style="font-size: 0.7rem; min-width: 64px;">
-                                    {{ p.value || 'missing' }}
-                                </ui5-tag>
-                                <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">{{ p.label }}</ui5-text>
-                            </div>
-                        </div>
-
-                        <!-- Group 3: Subscriber Destinations -->
-                        <div class="prereq-group-header">Subscriber Destinations <span class="prereq-group-note">(CPI tenant Destination Service)</span></div>
                         <div class="prereq-grid">
-                            <div v-for="p in subscriberDestStatuses" :key="p.key" class="prereq-item">
-                                <ui5-tag :design="prereqDesign(p.value)" style="font-size: 0.7rem; min-width: 64px;">
-                                    {{ p.value || 'missing' }}
+                            <div class="prereq-item">
+                                <ui5-tag :design="prereqDesign(selectedCpiTenant.PirApiStatus)" style="font-size: 0.7rem; min-width: 64px;">
+                                    {{ selectedCpiTenant.PirApiStatus || 'missing' }}
                                 </ui5-tag>
-                                <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">{{ p.label }}</ui5-text>
+                                <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">pir-api (it-rt / api)</ui5-text>
                             </div>
                         </div>
                     </div>
 
                     <div class="section-divider" />
 
-                    <!-- ── 4-step Wizard ── -->
+                    <!-- ── 3-step Wizard ── -->
                     <ui5-wizard style="height: auto;">
 
                         <!-- Step 1: CF Connection -->
@@ -115,20 +71,18 @@
                                     Save CF connection details and verify access using a short-lived bearer token. The token is never stored.
                                 </ui5-text>
 
-                                <template v-if="!selectedCpiTenant.ID">
-                                    <ui5-text class="field-label">Name *</ui5-text>
-                                    <ui5-input :value="selectedCpiTenant.Name || ''"
-                                        @input="selectedCpiTenant.Name = $event.target.value"
-                                        placeholder="cpi-mmt-dev" style="width: 100%;" />
+                                <ui5-text class="field-label">Name *</ui5-text>
+                                <ui5-input :value="selectedCpiTenant.Name || ''"
+                                    @input="selectedCpiTenant.Name = $event.target.value"
+                                    placeholder="cpi-mmt-dev" style="width: 100%;" />
 
-                                    <ui5-text class="field-label">Tag</ui5-text>
-                                    <ui5-input :value="selectedCpiTenant.Group || ''" @input="onSelectTag"
-                                        placeholder="e.g. Dev, Test, Production" showSuggestions style="width: 100%;">
-                                        <ui5-suggestion-item v-for="tag in tagOptions" :key="tag.value" :text="tag.value" />
-                                    </ui5-input>
+                                <ui5-text class="field-label">Tag</ui5-text>
+                                <ui5-input :value="selectedCpiTenant.Group || ''" @input="onSelectTag"
+                                    placeholder="e.g. Dev, Test, Production" showSuggestions style="width: 100%;">
+                                    <ui5-suggestion-item v-for="tag in tagOptions" :key="tag.value" :text="tag.value" />
+                                </ui5-input>
 
-                                    <div class="section-divider" />
-                                </template>
+                                <div class="section-divider" />
 
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
                                     <ui5-text class="field-label" style="margin-bottom: 0;">CF API Endpoint *</ui5-text>
@@ -199,145 +153,20 @@
                             </div>
                         </ui5-wizard-step>
 
-                        <!-- Step 2: TMS Node Selection -->
-                        <ui5-wizard-step
-                            title-text="TMS Node"
-                            subtitle-text="Register Source Node"
-                            icon="org-chart"
-                            :selected="wizardStep === 2"
-                            :disabled="selectedCpiTenant.LifecycleState === 'draft' || !selectedCpiTenant.ID"
-                            @click="wizardStep = 2">
-                            <div class="wizard-step-content">
-                                <ui5-message-strip v-if="selectedCpiTenant.LifecycleState === 'draft'"
-                                    design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
-                                    Complete Step 1 (CF Connection) first.
-                                </ui5-message-strip>
-
-                                <template v-else>
-                                    <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.75rem;">
-                                        Select and register a TMS source node. This is required before Apply — the node name is written into the
-                                        <strong>TransportManagementService</strong> destination as <code>sourceSystemId</code>.
-                                    </ui5-text>
-
-                                    <div class="status-header" style="margin-bottom: 0.5rem;">
-                                        <ui5-text style="font-size: 0.85rem; font-weight: bold;">Registration Status</ui5-text>
-                                        <ui5-tag :design="tmsStatusDesign" style="margin-left: 0.5rem; font-size: 0.7rem;">
-                                            {{ selectedCpiTenant.TmsNodeRegistrationStatus || 'missing' }}
-                                        </ui5-tag>
-                                        <ui5-text v-if="selectedCpiTenant.TmsSourceNodeName"
-                                            style="color: var(--sapNeutralTextColor); margin-left: 0.75rem; font-size: 0.85rem;">
-                                            Node: <strong>{{ selectedCpiTenant.TmsSourceNodeName }}(#{{ selectedCpiTenant.TmsSourceNodeID }})</strong>
-                                        </ui5-text>
-                                    </div>
-
-                                    <!-- Node selection — shown when not yet registered (missing) -->
-                                    <template v-if="!selectedCpiTenant.TmsNodeRegistrationStatus
-                                        || selectedCpiTenant.TmsNodeRegistrationStatus === 'missing'">
-                                        <ui5-text class="field-label">TMS Source Node *</ui5-text>
-                                        <ui5-select style="width: 100%;" :disabled="tmsLoading"
-                                            @change="selectedTmsNode = tmsNodes.find(n => n.id === Number($event.detail.selectedOption.value)) ?? null">
-                                            <ui5-option value="">— select a node —</ui5-option>
-                                            <ui5-option v-for="node in tmsNodes" :key="node.id" :value="String(node.id)">
-                                                {{ node.name }}{{ node.description ? ' — ' + node.description : '' }}
-                                            </ui5-option>
-                                        </ui5-select>
-                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center;">
-                                            <ui5-button design="Emphasized" :disabled="!selectedTmsNode || tmsLoading" @click="onRegisterTmsNode">
-                                                Verify &amp; Register
-                                            </ui5-button>
-                                            <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
-                                        </div>
-                                        <ui5-message-strip v-if="step2Message"
-                                            :design="step2Message.type" hide-close-button style="margin-top: 0.5rem;">
-                                            {{ step2Message.text }}
-                                        </ui5-message-strip>
-                                    </template>
-
-                                    <!-- Route confirmation — shown after registering -->
-                                    <template v-if="selectedCpiTenant.TmsNodeRegistrationStatus === 'registering'">
-                                        <div class="section-divider" />
-                                        <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor);">
-                                            Node <strong>{{ selectedCpiTenant.TmsSourceNodeName }}</strong> registered.
-                                            Configure Routes in the TMS UI, then confirm below.
-                                        </ui5-text>
-                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center;">
-                                            <ui5-button design="Default" :disabled="tmsLoading" @click="onRefreshRoutes">
-                                                I have configured Routes — Refresh
-                                            </ui5-button>
-                                            <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
-                                        </div>
-                                        <template v-if="tmsRoutes.length > 0">
-                                            <div class="section-divider" />
-                                            <ui5-text style="font-weight: bold; margin-bottom: 0.5rem;">Routes ({{ tmsRoutes.length }})</ui5-text>
-                                            <div v-for="route in tmsRoutes" :key="route.id" class="route-item">
-                                                <ui5-text style="font-size: 0.85rem;">
-                                                    {{ route.name }} -
-                                                    <template v-if="route.sourceNodeId === selectedCpiTenant.TmsSourceNodeID">
-                                                        Outbound: {{ tmsNodes.find(n => n.id === route.sourceNodeId)?.name ?? '?' }}(#{{ route.sourceNodeId }}) → {{ tmsNodes.find(n => n.id === route.targetNodeId)?.name ?? '?' }}(#{{ route.targetNodeId }})
-                                                    </template>
-                                                    <template v-else>
-                                                        Inbound: {{ tmsNodes.find(n => n.id === route.sourceNodeId)?.name ?? '?' }}(#{{ route.sourceNodeId }}) → {{ tmsNodes.find(n => n.id === route.targetNodeId)?.name ?? '?' }}(#{{ route.targetNodeId }})
-                                                    </template>
-                                                </ui5-text>
-                                            </div>
-                                            <div style="margin-top: 0.75rem;">
-                                                <ui5-button design="Positive" :disabled="tmsLoading" @click="onConfirmRoutes">
-                                                    Confirm Routes — Mark Ready
-                                                </ui5-button>
-                                            </div>
-                                        </template>
-                                        <ui5-text v-else-if="!tmsLoading"
-                                            style="color: var(--sapNeutralTextColor); font-size: 0.85rem; margin-top: 0.75rem; display: block;">
-                                            No routes found yet. Configure routes in TMS UI, then click Refresh.
-                                        </ui5-text>
-                                        <ui5-message-strip v-if="step2Message"
-                                            :design="step2Message.type" hide-close-button style="margin-top: 0.5rem;">
-                                            {{ step2Message.text }}
-                                        </ui5-message-strip>
-                                    </template>
-
-                                    <!-- Ready state -->
-                                    <template v-if="selectedCpiTenant.TmsNodeRegistrationStatus === 'ready'">
-                                        <ui5-message-strip design="Positive" hide-close-button style="margin-top: 0.5rem;">
-                                            TMS Node registered and routes confirmed — proceed to Inspect.
-                                        </ui5-message-strip>
-                                        <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                            <ui5-button design="Transparent" :disabled="tmsLoading" @click="onRefreshRoutes">
-                                                Refresh Routes
-                                            </ui5-button>
-                                            <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
-                                        </div>
-                                        <template v-if="tmsRoutes.length > 0">
-                                            <div class="section-divider" />
-                                            <ui5-text style="font-weight: bold; margin-bottom: 0.5rem;">Routes ({{ tmsRoutes.length }})</ui5-text>
-                                            <div v-for="route in tmsRoutes" :key="route.id" class="route-item">
-                                                <ui5-text style="font-size: 0.85rem;">{{ route.name }} — {{ tmsNodes.find(n => n.id === route.sourceNodeId)?.name ?? '?' }}(#{{ route.sourceNodeId }}) → {{ tmsNodes.find(n => n.id === route.targetNodeId)?.name ?? '?' }}(#{{ route.targetNodeId }})</ui5-text>
-                                            </div>
-                                        </template>
-                                    </template>
-                                </template>
-                            </div>
-                        </ui5-wizard-step>
-
-                        <!-- Step 3: Inspect -->
+                        <!-- Step 2: Inspect -->
                         <ui5-wizard-step
                             title-text="Inspect"
                             subtitle-text="Check Prerequisites"
                             icon="search"
-                            :selected="wizardStep === 3"
-                            :disabled="selectedCpiTenant.TmsNodeRegistrationStatus !== 'ready'"
-                            @click="wizardStep = 3">
+                            :selected="wizardStep === 2"
+                            :disabled="selectedCpiTenant.LifecycleState === 'draft' || !selectedCpiTenant.ID"
+                            @click="wizardStep = 2">
                             <div class="wizard-step-content">
                                 <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.75rem;">
                                     Inspect prerequisites before applying bootstrap. Uses the CF token from Step 1.
                                 </ui5-text>
 
-                                <ui5-message-strip v-if="selectedCpiTenant.TmsNodeRegistrationStatus !== 'ready'"
-                                    design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
-                                    Complete Step 2 (TMS Node) first.
-                                </ui5-message-strip>
-
-                                <ui5-message-strip v-else-if="!cfToken"
+                                <ui5-message-strip v-if="!cfToken"
                                     design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
                                     No CF token in this session — return to Step 1 to re-enter passcode.
                                 </ui5-message-strip>
@@ -349,9 +178,9 @@
                                         </ui5-button>
                                         <ui5-busy-indicator v-if="inspectLoading" size="Small" active />
                                     </div>
-                                    <ui5-message-strip v-if="step3Message && !bootstrapPreview"
-                                        :design="step3Message.type" hide-close-button style="margin-top: 0.5rem;">
-                                        {{ step3Message.text }}
+                                    <ui5-message-strip v-if="step2Message && !bootstrapPreview"
+                                        :design="step2Message.type" hide-close-button style="margin-top: 0.5rem;">
+                                        {{ step2Message.text }}
                                     </ui5-message-strip>
 
                                     <template v-if="bootstrapPreview">
@@ -396,14 +225,14 @@
                             </div>
                         </ui5-wizard-step>
 
-                        <!-- Step 4: Job Status -->
+                        <!-- Step 3: Job Status -->
                         <ui5-wizard-step
                             title-text="Apply"
                             subtitle-text="Job Status"
                             icon="play"
-                            :selected="wizardStep === 4"
-                            :disabled="selectedCpiTenant.TmsNodeRegistrationStatus !== 'ready' || selectedCpiTenant.LifecycleState === 'draft'"
-                            @click="wizardStep = 4">
+                            :selected="wizardStep === 3"
+                            :disabled="selectedCpiTenant.LifecycleState === 'draft' || !selectedCpiTenant.ID"
+                            @click="wizardStep = 3">
                             <div class="wizard-step-content">
                                 <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.75rem;">
                                     Monitor the bootstrap job progress. Use Retry or Reset if the job failed.
@@ -411,7 +240,7 @@
 
                                 <ui5-message-strip v-if="selectedCpiTenant.LifecycleState === 'draft'"
                                     design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
-                                    Complete Steps 1 and 2 first.
+                                    Complete Step 1 first.
                                 </ui5-message-strip>
 
                                 <ui5-message-strip v-else-if="!cfToken"
@@ -434,9 +263,9 @@
                                         </ui5-button>
                                         <ui5-busy-indicator v-if="bootstrapLoading" size="Small" active />
                                     </div>
-                                    <ui5-message-strip v-if="step4Message"
-                                        :design="step4Message.type" hide-close-button style="margin-top: 0.5rem;">
-                                        {{ step4Message.text }}
+                                    <ui5-message-strip v-if="step3Message"
+                                        :design="step3Message.type" hide-close-button style="margin-top: 0.5rem;">
+                                        {{ step3Message.text }}
                                     </ui5-message-strip>
 
                                     <template v-if="bootstrapLoading">
@@ -480,11 +309,268 @@
 
                     </ui5-wizard>
 
+                    <!-- ── TMS Extension Card ── -->
+                    <template v-if="selectedCpiTenant.ID">
+                        <div class="section-divider" />
+                        <div class="tms-extension-section">
+                            <div class="status-header" style="margin-bottom: 0.5rem;">
+                                <ui5-text style="font-weight: bold; font-size: 1rem;">TMS Extension</ui5-text>
+                                <ui5-text style="font-size: 0.8rem; color: var(--sapContent_LabelColor); margin-left: 0.5rem;">
+                                    (optional — only needed for TMS transport)
+                                </ui5-text>
+                                <ui5-busy-indicator v-if="tmsExtensionLoading" size="Small" active style="margin-left: 0.5rem;" />
+                            </div>
+
+                            <!-- Guard: not onboarded -->
+                            <ui5-message-strip v-if="selectedCpiTenant.LifecycleState !== 'ready'"
+                                design="Information" hide-close-button>
+                                Complete tenant onboarding first (lifecycle must be "ready").
+                            </ui5-message-strip>
+
+                            <!-- Guard: no Central TMS -->
+                            <ui5-message-strip v-else-if="!centralTmsContext?.TmsApiDestinationName"
+                                design="Critical" hide-close-button>
+                                Central TMS is not configured. Configure it in System Configuration before enabling TMS extension.
+                            </ui5-message-strip>
+
+                            <!-- Available -->
+                            <template v-else>
+                                <!-- TMS detail statuses (when TMS bootstrap has been attempted) -->
+                                <template v-if="['node_confirmed','bootstrapping','bootstrapped','bootstrap_failed'].includes(selectedCpiTenant.TmsExtensionState)">
+                                    <div class="prereq-group-header">TMS Resources</div>
+                                    <div class="prereq-grid" style="margin-bottom: 0.75rem;">
+                                        <div class="prereq-item">
+                                            <ui5-tag :design="selectedCpiTenant.CasEngineDestinationName ? 'Positive' : 'Neutral'" style="font-size: 0.7rem; min-width: 64px;">
+                                                {{ selectedCpiTenant.CasEngineDestinationName ? 'ready' : 'missing' }}
+                                            </ui5-tag>
+                                            <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">
+                                                {{ selectedCpiTenant.CasEngineDestinationName || 'CPIDELIVERY_CAS_{id}' }}
+                                            </ui5-text>
+                                        </div>
+                                        <div v-for="p in tmsPrereqStatuses" :key="p.key" class="prereq-item">
+                                            <ui5-tag :design="prereqDesign(p.value)" style="font-size: 0.7rem; min-width: 64px;">
+                                                {{ p.value || 'missing' }}
+                                            </ui5-tag>
+                                            <ui5-text style="font-size: 0.8rem; margin-left: 0.5rem;">{{ p.label }}</ui5-text>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Node info (when a node is selected) -->
+                                <div v-if="selectedCpiTenant.TmsSourceNodeName
+                                        && selectedCpiTenant.TmsExtensionState !== 'not_started'"
+                                    class="status-header" style="margin-bottom: 0.5rem;">
+                                    <ui5-text style="font-size: 0.85rem;">
+                                        Node: <strong>{{ selectedCpiTenant.TmsSourceNodeName }} (#{{ selectedCpiTenant.TmsSourceNodeID }})</strong>
+                                    </ui5-text>
+                                    <ui5-button v-if="selectedCpiTenant.TmsExtensionState !== 'bootstrapping'"
+                                        design="Transparent" style="margin-left: 0.75rem;" :disabled="tmsLoading"
+                                        @click="tmsChangeNode = true">
+                                        Change Node
+                                    </ui5-button>
+                                </div>
+
+                                <!-- Inline node change (shared across states) -->
+                                <template v-if="tmsChangeNode && selectedCpiTenant.TmsExtensionState !== 'not_started'">
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <ui5-select style="width: 100%; margin-bottom: 0.5rem;" :disabled="tmsLoading"
+                                            @change="selectedTmsNode = tmsNodes.find(n => n.id === Number($event.detail.selectedOption.value)) ?? null">
+                                            <ui5-option value="">— select a node —</ui5-option>
+                                            <ui5-option v-for="node in tmsNodes" :key="node.id" :value="String(node.id)">
+                                                {{ node.name }}{{ node.description ? ' — ' + node.description : '' }}
+                                            </ui5-option>
+                                        </ui5-select>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <ui5-button design="Emphasized" :disabled="!selectedTmsNode || tmsLoading" @click="onSelectNode">Select</ui5-button>
+                                            <ui5-button design="Transparent" @click="tmsChangeNode = false">Cancel</ui5-button>
+                                            <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- ── State: not_started ── -->
+                                <template v-if="!selectedCpiTenant.TmsExtensionState || selectedCpiTenant.TmsExtensionState === 'not_started'">
+                                    <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.75rem;">
+                                        TMS extension creates CAS service instances and subscriber destinations in the tenant CF space,
+                                        enabling Transport Management Service for delivering integration content.
+                                    </ui5-text>
+                                    <ui5-text class="field-label">TMS Source Node *</ui5-text>
+                                    <ui5-select style="width: 100%;" :disabled="tmsLoading"
+                                        @change="selectedTmsNode = tmsNodes.find(n => n.id === Number($event.detail.selectedOption.value)) ?? null">
+                                        <ui5-option value="">— select a node —</ui5-option>
+                                        <ui5-option v-for="node in tmsNodes" :key="node.id" :value="String(node.id)">
+                                            {{ node.name }}{{ node.description ? ' — ' + node.description : '' }}
+                                        </ui5-option>
+                                    </ui5-select>
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center;">
+                                        <ui5-button design="Emphasized" :disabled="!selectedTmsNode || tmsLoading" @click="onSelectNode">
+                                            Select Node
+                                        </ui5-button>
+                                        <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
+                                    </div>
+                                </template>
+
+                                <!-- ── State: node_pending ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'node_pending'">
+                                    <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.5rem;">
+                                        Configure routes in the TMS UI, then refresh and confirm.
+                                    </ui5-text>
+                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                                        <ui5-button design="Default" :disabled="tmsLoading" @click="onRefreshRoutes">Refresh Routes</ui5-button>
+                                        <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
+                                    </div>
+                                    <template v-if="tmsRoutes.length > 0">
+                                        <ui5-text style="font-weight: bold; margin-bottom: 0.5rem;">Routes ({{ tmsRoutes.length }})</ui5-text>
+                                        <div v-for="route in tmsRoutes" :key="route.id" class="route-item">
+                                            <ui5-text style="font-size: 0.85rem;">{{ route.name }} — {{ routeLabel(route) }}</ui5-text>
+                                        </div>
+                                        <div style="margin-top: 0.75rem;">
+                                            <ui5-button design="Positive" :disabled="tmsLoading" @click="onConfirmRoutes">
+                                                Confirm Routes
+                                            </ui5-button>
+                                        </div>
+                                    </template>
+                                    <ui5-text v-else-if="!tmsLoading"
+                                        style="color: var(--sapNeutralTextColor); font-size: 0.85rem; display: block;">
+                                        No routes found. Configure routes in the TMS UI, then click Refresh Routes.
+                                    </ui5-text>
+                                </template>
+
+                                <!-- ── State: node_confirmed ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'node_confirmed'">
+                                    <ui5-message-strip v-if="!cfToken"
+                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
+                                        No CF token — return to Step 1 and re-enter passcode before Inspect or Apply.
+                                    </ui5-message-strip>
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center;">
+                                        <ui5-button design="Default" :disabled="!cfToken || tmsInspectLoading || tmsApplyLoading" @click="onTmsPreview">
+                                            Inspect
+                                        </ui5-button>
+                                        <ui5-button design="Emphasized" :disabled="!cfToken || tmsApplyLoading || tmsInspectLoading" @click="onTmsApply">
+                                            Apply
+                                        </ui5-button>
+                                        <ui5-busy-indicator v-if="tmsInspectLoading || tmsApplyLoading" size="Small" active />
+                                    </div>
+                                    <template v-if="tmsPreview">
+                                            <div class="section-divider" />
+                                            <template v-if="tmsPreview.inspection.missingItems?.length">
+                                                <ui5-text style="color: var(--sapInformativeTextColor); font-size: 0.85rem; display: block;">Would create:</ui5-text>
+                                                <div v-for="item in tmsPreview.inspection.missingItems" :key="item" class="list-item">
+                                                    <ui5-text style="font-size: 0.8rem;">{{ item }}</ui5-text>
+                                                </div>
+                                            </template>
+                                            <template v-if="tmsPreview.inspection.permissionIssues?.length">
+                                                <ui5-text style="color: var(--sapNegativeTextColor); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Permission issues:</ui5-text>
+                                                <div v-for="item in tmsPreview.inspection.permissionIssues" :key="item" class="list-item">
+                                                    <ui5-text style="font-size: 0.8rem;">{{ item }}</ui5-text>
+                                                </div>
+                                            </template>
+                                            <template v-if="tmsPreview.inspection.waitingUserAction?.length">
+                                                <ui5-text style="color: var(--sapCriticalTextColor); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Waiting for user action:</ui5-text>
+                                                <div v-for="item in tmsPreview.inspection.waitingUserAction" :key="item" class="list-item">
+                                                    <ui5-text style="font-size: 0.8rem;">{{ item }}</ui5-text>
+                                                </div>
+                                            </template>
+                                            <ui5-text v-if="!tmsPreview.inspection.missingItems?.length
+                                                && !tmsPreview.inspection.permissionIssues?.length
+                                                && !tmsPreview.inspection.waitingUserAction?.length"
+                                                style="color: var(--sapPositiveTextColor); font-size: 0.85rem; display: block;">
+                                                All TMS prerequisites present.
+                                            </ui5-text>
+                                        </template>
+                                </template>
+
+                                <!-- ── State: bootstrapping ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'bootstrapping'">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <ui5-busy-indicator size="Small" active />
+                                        <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor);">TMS bootstrap in progress…</ui5-text>
+                                    </div>
+                                    <template v-if="tmsExtension?.latestJob">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <ui5-text style="font-weight: bold;">TMS Job</ui5-text>
+                                            <ui5-tag design="Information">{{ tmsExtension.latestJob.State }}</ui5-tag>
+                                        </div>
+                                        <div v-if="tmsExtension.latestJob.CurrentStep">
+                                            <ui5-text style="font-size: 0.8rem; font-weight: bold;">Step: </ui5-text>
+                                            <ui5-text style="font-size: 0.8rem;">{{ tmsExtension.latestJob.CurrentStep }}</ui5-text>
+                                        </div>
+                                    </template>
+                                </template>
+
+                                <!-- ── State: bootstrap_failed ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'bootstrap_failed'">
+                                    <ui5-message-strip design="Negative" hide-close-button style="margin-bottom: 0.75rem;">
+                                        TMS bootstrap failed{{ selectedCpiTenant.TmsBlockingReason ? ': ' + selectedCpiTenant.TmsBlockingReason : '' }}.
+                                        <template v-if="['TMS_NODE_CHANGED','PIR_KEY_CHANGED','CENTRAL_TMS_CHANGED'].includes(selectedCpiTenant.TmsBlockingReason)">
+                                            Re-apply to update TMS resources.
+                                        </template>
+                                    </ui5-message-strip>
+                                    <ui5-message-strip v-if="!cfToken"
+                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
+                                        No CF token — return to Step 1 and re-enter passcode before Retry.
+                                    </ui5-message-strip>
+                                    <template v-if="tmsExtension?.latestJob">
+                                        <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem;">
+                                            <div v-if="tmsExtension.latestJob.CurrentStep">
+                                                <ui5-text style="font-size: 0.8rem; font-weight: bold;">Failed Step: </ui5-text>
+                                                <ui5-text style="font-size: 0.8rem;">{{ tmsExtension.latestJob.CurrentStep }}</ui5-text>
+                                            </div>
+                                            <div v-if="tmsExtension.latestJob.ErrorDetail">
+                                                <ui5-text style="font-size: 0.8rem; color: var(--sapNegativeTextColor);">
+                                                    Error: {{ tmsExtension.latestJob.ErrorDetail }}
+                                                </ui5-text>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <ui5-button design="Default" :disabled="!cfToken || tmsApplyLoading" @click="onTmsApply">
+                                            Retry
+                                        </ui5-button>
+                                        <ui5-button design="Negative" :disabled="tmsApplyLoading" @click="onTmsReset">
+                                            Reset
+                                        </ui5-button>
+                                        <ui5-busy-indicator v-if="tmsApplyLoading" size="Small" active />
+                                    </div>
+                                </template>
+
+                                <!-- ── State: bootstrapped ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'bootstrapped'">
+                                    <ui5-message-strip design="Positive" hide-close-button style="margin-bottom: 0.75rem;">
+                                        TMS extension is active.
+                                    </ui5-message-strip>
+                                    <ui5-message-strip v-if="!cfToken"
+                                        design="Information" hide-close-button style="margin-bottom: 0.75rem;">
+                                        Re-Apply requires a CF token — return to Step 1 to re-enter passcode if needed.
+                                    </ui5-message-strip>
+                                    <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem;">
+                                        <div v-if="selectedCpiTenant.CasEngineDestinationName">
+                                            <ui5-text style="font-size: 0.8rem; font-weight: bold;">CAS Destination: </ui5-text>
+                                            <ui5-text style="font-size: 0.8rem; font-family: var(--sapFontMonospaceFamily, monospace);">{{ selectedCpiTenant.CasEngineDestinationName }}</ui5-text>
+                                        </div>
+                                        <div v-if="tmsExtension?.latestJob?.EndedAt">
+                                            <ui5-text style="font-size: 0.8rem; font-weight: bold;">Last TMS Job: </ui5-text>
+                                            <ui5-text style="font-size: 0.8rem;">{{ new Date(tmsExtension.latestJob.EndedAt).toLocaleString() }}</ui5-text>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <ui5-button design="Default" :disabled="!cfToken || tmsApplyLoading" @click="onTmsApply">
+                                            Re-Apply
+                                        </ui5-button>
+                                        <ui5-busy-indicator v-if="tmsApplyLoading" size="Small" active />
+                                    </div>
+                                </template>
+
+                                <!-- TMS card message -->
+                                <ui5-message-strip v-if="tmsCardMessage"
+                                    :design="tmsCardMessage.type" hide-close-button style="margin-top: 0.5rem;">
+                                    {{ tmsCardMessage.text }}
+                                </ui5-message-strip>
+                            </template>
+                        </div>
+                    </template>
+
                 </div>
-            </ui5-tab>
-
-
-        </ui5-tabcontainer>
 
         <ui5-toolbar slot="footer">
             <ui5-toolbar-button design="Transparent" text="Close" @click="closeManageModal" />
@@ -510,11 +596,13 @@ import {
     SaveCfIdentity, ListCfOrgs, ListCfSpaces, ExchangeCfPasscode,
     PreviewBootstrap, ApplyBootstrap, GetBootstrapStatus, RetryBootstrap, ResetBootstrap,
     SelectTmsNode, GetTmsExtensionRoutes, ConfirmTmsExtensionRoutes,
+    GetTmsExtension, PreviewTmsExtension, ApplyTmsExtension, ResetTmsExtension,
     GetCentralTmsContext, GetTransportNodes,
 } from '@/service/api'
 import type {
     CpiTenant, BootstrapPreview, BootstrapJob,
-    TransportRoute, TenantLifecycleState, PrerequisiteStatus, CentralTmsContext, TransportNode,
+    TransportRoute, TenantLifecycleState,
+    CentralTmsContext, TransportNode, TmsExtensionOverview, TmsExtensionState,
 } from '@/service/model'
 import "@ui5/webcomponents/dist/TableRowAction.js"
 import "@ui5/webcomponents-icons/dist/connected.js"
@@ -536,8 +624,6 @@ import "@ui5/webcomponents/dist/Input.js"
 import "@ui5/webcomponents/dist/Link.js"
 import "@ui5/webcomponents/dist/SuggestionItem.js"
 import "@ui5/webcomponents/dist/Text.js"
-import "@ui5/webcomponents/dist/TabContainer.js"
-import "@ui5/webcomponents/dist/Tab.js"
 import "@ui5/webcomponents/dist/Select.js"
 import "@ui5/webcomponents/dist/Option.js"
 import "@ui5/webcomponents-fiori/dist/Wizard.js"
@@ -569,9 +655,8 @@ export default defineComponent({
             selectedCpiTenant: {} as CpiTenant,
             centralTmsContext: null as CentralTmsContext | null,
             loading: false,
-            saving: false,
-            // Bootstrap wizard step: 1=CF Connection, 2=TMS Node, 3=Inspect, 4=Apply
-            wizardStep: 1 as 1 | 2 | 3 | 4,
+            // Bootstrap wizard step: 1=CF Connection, 2=Inspect, 3=Apply
+            wizardStep: 1 as 1 | 2 | 3,
             // Step 1 state
             cfIdentity: { cfApiEndpoint: '', cfOrg: '', cfSpace: '' },
             cfToken: '',
@@ -585,17 +670,25 @@ export default defineComponent({
             _loadOrgsDebounce: null as ReturnType<typeof setTimeout> | null,
             cfOrgMode: 'select' as 'select' | 'manual',
             cfSpaceMode: 'select' as 'select' | 'manual',
-            // Per-step inline message (replaces toast for modal operations)
+            // Per-step inline messages
             step2Message: null as { type: 'Positive' | 'Negative'; text: string } | null,
             step3Message: null as { type: 'Positive' | 'Negative'; text: string } | null,
-            step4Message: null as { type: 'Positive' | 'Negative'; text: string } | null,
-            // Step 2+3 state
+            // Base bootstrap state
             bootstrapLoading: false,
             inspectLoading: false,
             bootstrapPreview: null as BootstrapPreview | null,
             bootstrapJob: null as BootstrapJob | null,
             pollTimer: null as ReturnType<typeof setInterval> | null,
-            // TMS Node state
+            // TMS Extension card state
+            tmsExtension: null as TmsExtensionOverview | null,
+            tmsExtensionLoading: false,
+            tmsInspectLoading: false,
+            tmsApplyLoading: false,
+            tmsPreview: null as BootstrapPreview | null,
+            tmsCardMessage: null as { type: 'Positive' | 'Negative'; text: string } | null,
+            tmsPollTimer: null as ReturnType<typeof setInterval> | null,
+            tmsChangeNode: false,
+            // TMS Node / routes (shared)
             selectedTmsNode: null as TransportNode | null,
             tmsNodes: [] as TransportNode[],
             tmsLoading: false,
@@ -613,11 +706,16 @@ export default defineComponent({
             }
             return map[this.selectedCpiTenant.LifecycleState] ?? 'Neutral'
         },
-        tmsStatusDesign(): string {
-            const map: Partial<Record<PrerequisiteStatus, string>> = {
-                missing: 'Neutral', registering: 'Information', ready: 'Positive',
+        tmsExtensionDesign(): string {
+            const map: Record<TmsExtensionState, string> = {
+                not_started: 'Neutral',
+                node_pending: 'Information',
+                node_confirmed: 'Set2',
+                bootstrapping: 'Information',
+                bootstrapped: 'Positive',
+                bootstrap_failed: 'Critical',
             }
-            return map[this.selectedCpiTenant.TmsNodeRegistrationStatus] ?? 'Neutral'
+            return map[this.selectedCpiTenant.TmsExtensionState] ?? 'Neutral'
         },
         jobStateDesign(): string {
             const map: Record<string, string> = {
@@ -626,17 +724,11 @@ export default defineComponent({
             }
             return map[this.bootstrapJob?.State ?? ''] ?? 'Neutral'
         },
-        subscriberInstanceStatuses() {
+        tmsPrereqStatuses() {
             const t = this.selectedCpiTenant
             return [
-                { key: 'PirApiStatus', label: 'pir-api (it-rt / api)', value: t.PirApiStatus },
-                { key: 'CasApplicationStatus', label: 'content-agent-engine (CAS / application)', value: t.CasApplicationStatus },
-                { key: 'CasStandardStatus', label: 'content-agent-assembly (CAS / standard)', value: t.CasStandardStatus },
-            ]
-        },
-        subscriberDestStatuses() {
-            const t = this.selectedCpiTenant
-            return [
+                { key: 'CasApplicationStatus', label: 'CAS (application)', value: t.CasApplicationStatus },
+                { key: 'CasStandardStatus', label: 'CAS (standard)', value: t.CasStandardStatus },
                 { key: 'CloudIntegrationDestStatus', label: 'CloudIntegration', value: t.CloudIntegrationDestStatus },
                 { key: 'ContentAssemblyDestStatus', label: 'ContentAssemblyService', value: t.ContentAssemblyDestStatus },
                 { key: 'TransportManagementDestStatus', label: 'TransportManagementService', value: t.TransportManagementDestStatus },
@@ -655,11 +747,18 @@ export default defineComponent({
             return map[status] ?? 'Neutral'
         },
 
+        routeLabel(route: TransportRoute): string {
+            const src = this.tmsNodes.find(n => n.id === route.sourceNodeId)?.name ?? `#${route.sourceNodeId}`
+            const tgt = this.tmsNodes.find(n => n.id === route.targetNodeId)?.name ?? `#${route.targetNodeId}`
+            return `${src} → ${tgt}`
+        },
+
         // ── Dialog management ──────────────────────────────────────────────────
 
         handleAdd() {
             this.selectedCpiTenant = {} as CpiTenant
             this.bootstrapPreview = null
+            this.tmsPreview = null
             this.tmsRoutes = []
             this.cfToken = ''
             this.cfIdentity = { cfApiEndpoint: '', cfOrg: '', cfSpace: '' }
@@ -668,11 +767,15 @@ export default defineComponent({
             this.cfOrgMode = 'select'
             this.cfSpaceMode = 'select'
             this.wizardStep = 1
+            this.tmsExtension = null
+            this.tmsChangeNode = false
             this.showManageModal = true
+            this.loadTmsNodes()
         },
         async handleManage(row: CpiTenant) {
             this.selectedCpiTenant = { ...row }
             this.bootstrapPreview = null
+            this.tmsPreview = null
             this.tmsRoutes = []
             this.cfToken = ''
             this.cfIdentity = {
@@ -684,28 +787,37 @@ export default defineComponent({
             this.cfSpaceOptions = []
             this.cfOrgMode = 'select'
             this.cfSpaceMode = 'select'
+            this.tmsExtension = null
+            this.tmsChangeNode = false
+            this.tmsCardMessage = null
+            // Step derivation: draft → 1; configured/not_ready → 2; readying/ready → 3
             this.wizardStep = row.LifecycleState === 'draft' ? 1
-                : (row.TmsNodeRegistrationStatus !== 'ready' ? 2
-                : (row.LifecycleState === 'configured' ? 3 : 4))
+                : (['configured', 'not_ready'].includes(row.LifecycleState) ? 2 : 3)
             this.showManageModal = true
             await this.refreshSelectedTenant()
             await this.loadBootstrapJob()
             if (this.selectedCpiTenant.LifecycleState === 'readying') this.startPoll()
             if (row.TmsSourceNodeName) await this.loadRoutes()
             await this.loadTmsNodes()
+            await this.loadTmsExtension()
+            if (this.selectedCpiTenant.TmsExtensionState === 'bootstrapping') this.startTmsPoll()
         },
         closeManageModal() {
             this.showManageModal = false
             this.stopPoll()
+            this.stopTmsPoll()
             this.cfToken = ''
             this.cfIdentity = { cfApiEndpoint: '', cfOrg: '', cfSpace: '' }
             this.bootstrapPreview = null
             this.bootstrapJob = null
             this.step2Message = null
             this.step3Message = null
-            this.step4Message = null
+            this.tmsExtension = null
+            this.tmsPreview = null
+            this.tmsCardMessage = null
             this.selectedTmsNode = null
             this.tmsRoutes = []
+            this.tmsChangeNode = false
         },
 
         // ── CRUD ───────────────────────────────────────────────────────────────
@@ -727,42 +839,28 @@ export default defineComponent({
             await DeleteCpiTenant(rows[0].ID)
             await this.refresh()
         },
-        async onSave() {
-            this.saving = true
-            try {
-                const result = await UpsertCpiTenant(this.selectedCpiTenant)
-                await this.refresh()
-                const updated = this.cpiTenants.find(t => t.ID === (result.ID || this.selectedCpiTenant.ID))
-                if (updated) this.selectedCpiTenant = { ...updated }
-                window.$toast.success('Tenant saved')
-            } catch {
-                // Error displayed by http interceptor
-            } finally {
-                this.saving = false
-            }
-        },
 
         // ── Bootstrap Step 1 ──────────────────────────────────────────────────
 
         openCfLoginPage() {
-            // Derive login URL: https://api.cf.<region>.hana.ondemand.com → https://login.cf.<region>.hana.ondemand.com/passcode
             const base = this.cfIdentity.cfApiEndpoint.replace(/^https?:\/\/api\./, 'https://login.').replace(/\/$/, '')
             window.open(`${base}/passcode`, '_blank', 'noopener')
         },
 
         onCfTokenInput(value: string) {
             this.cfToken = value
-            // Token changed — stale org/space options are invalid, reset
-            if (this.cfOrgOptions.length || this.cfSpaceOptions.length) {
-                this.cfOrgOptions = []
-                this.cfSpaceOptions = []
-                this.cfOrgMode = 'select'
-                this.cfSpaceMode = 'select'
-                this.cfIdentity.cfOrg = ''
-                this.cfIdentity.cfSpace = ''
+            // For existing tenants, preserve the stored org/space when re-entering a token.
+            // Only clear org/space for new tenants (no ID) where the user is starting fresh.
+            if (!this.selectedCpiTenant.ID) {
+                if (this.cfOrgOptions.length || this.cfSpaceOptions.length) {
+                    this.cfOrgOptions = []
+                    this.cfSpaceOptions = []
+                    this.cfOrgMode = 'select'
+                    this.cfSpaceMode = 'select'
+                    this.cfIdentity.cfOrg = ''
+                    this.cfIdentity.cfSpace = ''
+                }
             }
-            // Auto-load orgs once passcode looks complete (non-empty + endpoint set).
-            // Debounced so rapid typing doesn't fire multiple requests.
             clearTimeout(this._loadOrgsDebounce ?? undefined)
             if (value && this.cfIdentity.cfApiEndpoint) {
                 this._loadOrgsDebounce = setTimeout(() => this.loadCfOrgs(), 600)
@@ -776,15 +874,16 @@ export default defineComponent({
             this.cfSpaceOptions = []
             this.cfOrgMode = 'select'
             this.cfSpaceMode = 'select'
-            this.cfIdentity.cfOrg = ''
-            this.cfIdentity.cfSpace = ''
+            // Only clear org/space for new tenants; existing tenants keep their stored values.
+            if (!this.selectedCpiTenant.ID) {
+                this.cfIdentity.cfOrg = ''
+                this.cfIdentity.cfSpace = ''
+            }
             try {
-                // Exchange passcode → Bearer token first, then list orgs
                 const { accessToken } = await ExchangeCfPasscode(this.cfIdentity.cfApiEndpoint, this.cfToken)
                 this.cfToken = accessToken
                 this.cfOrgOptions = await ListCfOrgs(this.cfIdentity.cfApiEndpoint, this.cfToken)
             } catch {
-                // Error displayed by http interceptor; fall back to manual input
                 this.cfOrgMode = 'manual'
             } finally {
                 this.loadOrgsLoading = false
@@ -801,7 +900,6 @@ export default defineComponent({
             try {
                 this.cfSpaceOptions = await ListCfSpaces(this.cfIdentity.cfApiEndpoint, this.cfToken, guid)
             } catch {
-                // Error displayed by http interceptor; fall back to manual input
                 this.cfSpaceMode = 'manual'
             } finally {
                 this.loadSpacesLoading = false
@@ -811,11 +909,13 @@ export default defineComponent({
         async onSaveCfIdentity() {
             this.step1Loading = true
             try {
-                // For new tenants, create the placeholder record (Name + Group only) to obtain an ID.
-                // CF identity fields must not flow through UpsertCpiTenant.
                 if (!this.selectedCpiTenant.ID) {
+                    // New tenant: create placeholder with Name + Group to obtain an ID.
                     const created = await UpsertCpiTenant({ Name: this.selectedCpiTenant.Name, Group: this.selectedCpiTenant.Group } as CpiTenant)
                     this.selectedCpiTenant = { ...this.selectedCpiTenant, ID: created.ID }
+                } else {
+                    // Existing tenant: save Name + Group if changed.
+                    await UpsertCpiTenant({ ID: this.selectedCpiTenant.ID, Name: this.selectedCpiTenant.Name, Group: this.selectedCpiTenant.Group } as CpiTenant)
                 }
                 await SaveCfIdentity(this.selectedCpiTenant.ID, {
                     cfApiEndpoint: this.cfIdentity.cfApiEndpoint,
@@ -837,15 +937,12 @@ export default defineComponent({
 
         // ── Bootstrap Steps 2+3 ───────────────────────────────────────────────
 
-        // refreshSelectedTenant fetches the latest tenant list and updates selectedCpiTenant.
         async refreshSelectedTenant() {
             await this.refresh()
             const updated = this.cpiTenants.find(t => t.ID === this.selectedCpiTenant.ID)
             if (updated) this.selectedCpiTenant = { ...updated }
         },
 
-        // loadBootstrapJob fetches the latest bootstrap job for display only.
-        // It never drives tenant state updates.
         async loadBootstrapJob() {
             if (!this.selectedCpiTenant.ID) return
             try {
@@ -855,9 +952,6 @@ export default defineComponent({
             }
         },
 
-        // startPoll polls the tenant's own lifecycle state every 3 seconds while it is
-        // in 'readying'. Independently refreshes the bootstrap job for display.
-        // Stops when the tenant leaves 'readying'.
         startPoll() {
             if (this.pollTimer) return
             this.pollTimer = setInterval(async () => {
@@ -875,14 +969,14 @@ export default defineComponent({
         async onPreview() {
             this.inspectLoading = true
             this.bootstrapPreview = null
-            this.step3Message = null
+            this.step2Message = null
             try {
                 this.bootstrapPreview = await PreviewBootstrap(this.selectedCpiTenant.ID, this.cfToken)
                 window.$toast.success('Bootstrap inspection completed')
             } catch (e: any) {
                 if (e?.status === 401) this.cfToken = ''
                 const msg = e?.message ?? 'Inspect failed'
-                this.step3Message = { type: 'Negative', text: msg }
+                this.step2Message = { type: 'Negative', text: msg }
             } finally {
                 this.inspectLoading = false
             }
@@ -890,25 +984,25 @@ export default defineComponent({
         async onApply() {
             this.bootstrapLoading = true
             this.bootstrapPreview = null
-            this.step3Message = null
+            this.step2Message = null
             try {
                 const { jobId } = await ApplyBootstrap(this.selectedCpiTenant.ID, this.cfToken)
                 this.bootstrapJob = { ID: jobId, State: 'running', JobType: 'apply' } as any
-                this.wizardStep = 4
+                this.wizardStep = 3
                 this.stopPoll()
                 this.startPoll()
                 window.$toast.success('Bootstrap apply started')
             } catch (e: any) {
                 if (e?.status === 401) this.cfToken = ''
                 const msg = e?.message ?? 'Apply failed'
-                this.step3Message = { type: 'Negative', text: msg }
+                this.step2Message = { type: 'Negative', text: msg }
             } finally {
                 this.bootstrapLoading = false
             }
         },
         async onRetry() {
             this.bootstrapLoading = true
-            this.step4Message = null
+            this.step3Message = null
             try {
                 const { jobId } = await RetryBootstrap(this.selectedCpiTenant.ID, this.cfToken)
                 this.bootstrapJob = { ID: jobId, State: 'running', JobType: 'retry' } as any
@@ -918,29 +1012,41 @@ export default defineComponent({
             } catch (e: any) {
                 if (e?.status === 401) this.cfToken = ''
                 const msg = e?.message ?? 'Retry failed'
-                this.step4Message = { type: 'Negative', text: msg }
+                this.step3Message = { type: 'Negative', text: msg }
             } finally {
                 this.bootstrapLoading = false
             }
         },
         async onReset() {
             this.bootstrapLoading = true
-            this.step4Message = null
+            this.step3Message = null
             try {
                 await ResetBootstrap(this.selectedCpiTenant.ID)
                 await this.refreshSelectedTenant()
                 await this.loadBootstrapJob()
-                this.step4Message = { type: 'Positive', text: 'Bootstrap reset — tenant returned to configured state.' }
+                this.step3Message = { type: 'Positive', text: 'Bootstrap reset — tenant returned to configured state.' }
                 window.$toast.success('Bootstrap reset — tenant returned to configured state')
             } catch (e: any) {
                 const msg = e?.message ?? 'Reset failed'
-                this.step4Message = { type: 'Negative', text: msg }
+                this.step3Message = { type: 'Negative', text: msg }
             } finally {
                 this.bootstrapLoading = false
             }
         },
 
-        // ── TMS Node ───────────────────────────────────────────────────────────
+        // ── TMS Extension ─────────────────────────────────────────────────────
+
+        async loadTmsExtension() {
+            if (!this.selectedCpiTenant.ID) return
+            this.tmsExtensionLoading = true
+            try {
+                this.tmsExtension = await GetTmsExtension(this.selectedCpiTenant.ID)
+            } catch {
+                this.tmsExtension = null
+            } finally {
+                this.tmsExtensionLoading = false
+            }
+        },
 
         async loadRoutes() {
             if (!this.selectedCpiTenant.ID) return
@@ -957,49 +1063,108 @@ export default defineComponent({
         },
         async loadTmsNodes() {
             try {
-                const nodes = await GetTransportNodes()
-                this.tmsNodes = nodes
+                this.tmsNodes = await GetTransportNodes()
             } catch (e: any) {
-                const msg = e?.message ?? 'Failed to load TMS nodes'
-                this.step2Message = { type: 'Negative', text: msg }
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'Failed to load TMS nodes' }
             }
         },
-        async onRegisterTmsNode() {
+        async onSelectNode() {
             if (!this.selectedTmsNode) return
             this.tmsLoading = true
-            this.step2Message = null
+            this.tmsCardMessage = null
             try {
                 await SelectTmsNode(this.selectedCpiTenant.ID, { nodeId: this.selectedTmsNode.id, nodeName: this.selectedTmsNode.name })
-                await this.refresh()
-                const updated = this.cpiTenants.find(t => t.ID === this.selectedCpiTenant.ID)
-                if (updated) this.selectedCpiTenant = { ...updated }
-                this.step2Message = { type: 'Positive', text: `Node "${this.selectedTmsNode.name}" verified — configure Routes in TMS UI.` }
-                window.$toast.success('TMS node registered')
+                await this.refreshSelectedTenant()
+                this.tmsChangeNode = false
+                this.selectedTmsNode = null
+                this.tmsCardMessage = { type: 'Positive', text: `Node "${this.selectedCpiTenant.TmsSourceNodeName}" selected — configure routes in TMS UI.` }
+                await this.loadRoutes()
+                await this.loadTmsExtension()
             } catch (e: any) {
-                const msg = e?.message ?? 'Registration failed'
-                this.step2Message = { type: 'Negative', text: msg }
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'Node selection failed' }
             } finally {
                 this.tmsLoading = false
             }
         },
         async onConfirmRoutes() {
             this.tmsLoading = true
-            this.step2Message = null
+            this.tmsCardMessage = null
             try {
                 const res = await ConfirmTmsExtensionRoutes(this.selectedCpiTenant.ID)
                 this.tmsRoutes = res.routes || []
-                await this.refresh()
-                const updated = this.cpiTenants.find(t => t.ID === this.selectedCpiTenant.ID)
-                if (updated) this.selectedCpiTenant = { ...updated }
-                this.step2Message = { type: 'Positive', text: 'Routes confirmed — TMS Node registration complete.' }
+                await this.refreshSelectedTenant()
+                await this.loadTmsExtension()
+                this.tmsCardMessage = { type: 'Positive', text: 'Routes confirmed — ready for TMS bootstrap.' }
                 window.$toast.success('TMS routes confirmed')
-                this.wizardStep = 3
             } catch (e: any) {
-                const msg = e?.message ?? 'Confirm failed'
-                this.step2Message = { type: 'Negative', text: msg }
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'Confirm failed' }
             } finally {
                 this.tmsLoading = false
             }
+        },
+
+        async onTmsPreview() {
+            this.tmsInspectLoading = true
+            this.tmsPreview = null
+            this.tmsCardMessage = null
+            try {
+                this.tmsPreview = await PreviewTmsExtension(this.selectedCpiTenant.ID, this.cfToken)
+                window.$toast.success('TMS inspection completed')
+            } catch (e: any) {
+                if (e?.status === 401) this.cfToken = ''
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'TMS inspect failed' }
+            } finally {
+                this.tmsInspectLoading = false
+            }
+        },
+
+        async onTmsApply() {
+            this.tmsApplyLoading = true
+            this.tmsPreview = null
+            this.tmsCardMessage = null
+            try {
+                await ApplyTmsExtension(this.selectedCpiTenant.ID, this.cfToken)
+                await this.refreshSelectedTenant()
+                await this.loadTmsExtension()
+                this.startTmsPoll()
+                window.$toast.success('TMS extension apply started')
+            } catch (e: any) {
+                if (e?.status === 401) this.cfToken = ''
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'TMS apply failed' }
+            } finally {
+                this.tmsApplyLoading = false
+            }
+        },
+
+        async onTmsReset() {
+            this.tmsApplyLoading = true
+            this.tmsCardMessage = null
+            try {
+                await ResetTmsExtension(this.selectedCpiTenant.ID)
+                await this.refreshSelectedTenant()
+                await this.loadTmsExtension()
+                this.tmsCardMessage = { type: 'Positive', text: 'TMS extension reset to not_started.' }
+                window.$toast.success('TMS extension reset')
+            } catch (e: any) {
+                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'TMS reset failed' }
+            } finally {
+                this.tmsApplyLoading = false
+            }
+        },
+
+        startTmsPoll() {
+            if (this.tmsPollTimer) return
+            this.tmsPollTimer = setInterval(async () => {
+                if (!this.selectedCpiTenant.ID) { this.stopTmsPoll(); return }
+                await this.refreshSelectedTenant()
+                await this.loadTmsExtension()
+                if (this.selectedCpiTenant.TmsExtensionState !== 'bootstrapping') {
+                    this.stopTmsPoll()
+                }
+            }, 3000)
+        },
+        stopTmsPoll() {
+            if (this.tmsPollTimer) { clearInterval(this.tmsPollTimer); this.tmsPollTimer = null }
         },
 
         // ── Form helpers ───────────────────────────────────────────────────────
@@ -1018,6 +1183,7 @@ export default defineComponent({
     },
     unmounted() {
         this.stopPoll()
+        this.stopTmsPoll()
     },
 })
 </script>
@@ -1104,5 +1270,9 @@ export default defineComponent({
     background: var(--sapList_Background);
     border-radius: 4px;
     margin-bottom: 0.25rem;
+}
+
+.tms-extension-section {
+    padding: 0.25rem 0;
 }
 </style>
