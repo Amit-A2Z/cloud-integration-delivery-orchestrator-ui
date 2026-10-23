@@ -797,8 +797,8 @@ export default defineComponent({
             await this.refreshSelectedTenant()
             await this.loadBootstrapJob()
             if (this.selectedCpiTenant.LifecycleState === 'readying') this.startPoll()
-            if (row.TmsSourceNodeName) await this.loadRoutes()
             await this.loadTmsNodes()
+            if (row.TmsSourceNodeName) await this.loadRoutes()
             await this.loadTmsExtension()
             if (this.selectedCpiTenant.TmsExtensionState === 'bootstrapping') this.startTmsPoll()
         },
@@ -928,6 +928,8 @@ export default defineComponent({
                 if (updated) this.selectedCpiTenant = { ...updated }
                 this.step1Error = ''
                 this.wizardStep = 2
+                // Ensure TMS node list is available for the TMS Extension card.
+                await this.loadTmsNodes()
             } catch (e: any) {
                 this.step1Error = e?.message ?? 'CF identity verification failed'
             } finally {

@@ -84,7 +84,7 @@ const doSaveTmsContext = async () => {
   try {
     const result = await UpsertCentralTmsContext({ TmsApiDestinationName: tmsEditDestName.value.trim() })
     tmsContext.value = result
-    const affected = (result as any).affectedTenants ?? 0
+    const affected = result.affectedTenants ?? 0
     if (affected > 0) {
       window.$toast.warning(`Central TMS context saved — ${affected} tenant(s) marked as TMS bootstrap_failed and need re-apply.`)
     } else {
