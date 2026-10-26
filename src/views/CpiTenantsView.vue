@@ -336,7 +336,7 @@
                             <!-- Available -->
                             <template v-else>
                                 <!-- TMS detail statuses (when TMS bootstrap has been attempted) -->
-                                <template v-if="['node_confirmed','bootstrapping','bootstrapped','bootstrap_failed'].includes(selectedCpiTenant.TmsExtensionState)">
+                                <template v-if="['node_confirmed','bootstrapping','bootstrapped'].includes(selectedCpiTenant.TmsExtensionState)">
                                     <div class="prereq-group-header">TMS Resources</div>
                                     <div class="prereq-grid" style="margin-bottom: 0.75rem;">
                                         <div class="prereq-item">
@@ -410,11 +410,20 @@
                                     </div>
                                 </template>
 
-                                <!-- ── State: node_pending ── -->
-                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'node_pending'">
-                                    <ui5-text style="font-size: 0.85rem; color: var(--sapContent_LabelColor); display: block; margin-bottom: 0.5rem;">
-                                        Configure routes in the TMS UI, then refresh and confirm.
-                                    </ui5-text>
+                                <!-- ── State: node_confirmed ── -->
+                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'node_confirmed'">
+                                    <ui5-message-strip v-if="selectedCpiTenant.TmsBlockingReason"
+                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
+                                        {{ selectedCpiTenant.TmsBlockingReason === 'TMS_NODE_CHANGED' ? 'Node changed — re-apply to update TMS resources.' :
+                                           selectedCpiTenant.TmsBlockingReason === 'PIR_KEY_CHANGED' ? 'PIR key changed — re-apply to update TMS resources.' :
+                                           selectedCpiTenant.TmsBlockingReason === 'CENTRAL_TMS_CHANGED' ? 'Central TMS changed — select node and re-apply.' :
+                                           selectedCpiTenant.TmsBlockingReason }}
+                                    </ui5-message-strip>
+                                    <ui5-message-strip v-if="!cfToken"
+                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
+                                        No CF token — return to Step 1 and re-enter passcode before Inspect or Apply.
+                                    </ui5-message-strip>
+                                    <!-- Routes (read-only display) -->
                                     <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                                         <ui5-button design="Default" :disabled="tmsLoading" @click="onRefreshRoutes">Refresh Routes</ui5-button>
                                         <ui5-busy-indicator v-if="tmsLoading" size="Small" active />
@@ -424,24 +433,7 @@
                                         <div v-for="route in tmsRoutes" :key="route.id" class="route-item">
                                             <ui5-text style="font-size: 0.85rem;">{{ route.name }} — {{ routeLabel(route) }}</ui5-text>
                                         </div>
-                                        <div style="margin-top: 0.75rem;">
-                                            <ui5-button design="Positive" :disabled="tmsLoading" @click="onConfirmRoutes">
-                                                Confirm Routes
-                                            </ui5-button>
-                                        </div>
                                     </template>
-                                    <ui5-text v-else-if="!tmsLoading"
-                                        style="color: var(--sapNeutralTextColor); font-size: 0.85rem; display: block;">
-                                        No routes found. Configure routes in the TMS UI, then click Refresh Routes.
-                                    </ui5-text>
-                                </template>
-
-                                <!-- ── State: node_confirmed ── -->
-                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'node_confirmed'">
-                                    <ui5-message-strip v-if="!cfToken"
-                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
-                                        No CF token — return to Step 1 and re-enter passcode before Inspect or Apply.
-                                    </ui5-message-strip>
                                     <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center;">
                                         <ui5-button design="Default" :disabled="!cfToken || tmsInspectLoading || tmsApplyLoading" @click="onTmsPreview">
                                             Inspect
@@ -496,42 +488,6 @@
                                             <ui5-text style="font-size: 0.8rem;">{{ tmsExtension.latestJob.CurrentStep }}</ui5-text>
                                         </div>
                                     </template>
-                                </template>
-
-                                <!-- ── State: bootstrap_failed ── -->
-                                <template v-else-if="selectedCpiTenant.TmsExtensionState === 'bootstrap_failed'">
-                                    <ui5-message-strip design="Negative" hide-close-button style="margin-bottom: 0.75rem;">
-                                        TMS bootstrap failed{{ selectedCpiTenant.TmsBlockingReason ? ': ' + selectedCpiTenant.TmsBlockingReason : '' }}.
-                                        <template v-if="['TMS_NODE_CHANGED','PIR_KEY_CHANGED','CENTRAL_TMS_CHANGED'].includes(selectedCpiTenant.TmsBlockingReason)">
-                                            Re-apply to update TMS resources.
-                                        </template>
-                                    </ui5-message-strip>
-                                    <ui5-message-strip v-if="!cfToken"
-                                        design="Critical" hide-close-button style="margin-bottom: 0.75rem;">
-                                        No CF token — return to Step 1 and re-enter passcode before Retry.
-                                    </ui5-message-strip>
-                                    <template v-if="tmsExtension?.latestJob">
-                                        <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.75rem;">
-                                            <div v-if="tmsExtension.latestJob.CurrentStep">
-                                                <ui5-text style="font-size: 0.8rem; font-weight: bold;">Failed Step: </ui5-text>
-                                                <ui5-text style="font-size: 0.8rem;">{{ tmsExtension.latestJob.CurrentStep }}</ui5-text>
-                                            </div>
-                                            <div v-if="tmsExtension.latestJob.ErrorDetail">
-                                                <ui5-text style="font-size: 0.8rem; color: var(--sapNegativeTextColor);">
-                                                    Error: {{ tmsExtension.latestJob.ErrorDetail }}
-                                                </ui5-text>
-                                            </div>
-                                        </div>
-                                    </template>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <ui5-button design="Default" :disabled="!cfToken || tmsApplyLoading" @click="onTmsApply">
-                                            Retry
-                                        </ui5-button>
-                                        <ui5-button design="Negative" :disabled="tmsApplyLoading" @click="onTmsReset">
-                                            Reset
-                                        </ui5-button>
-                                        <ui5-busy-indicator v-if="tmsApplyLoading" size="Small" active />
-                                    </div>
                                 </template>
 
                                 <!-- ── State: bootstrapped ── -->
@@ -595,7 +551,7 @@ import {
     DeleteCpiTenant, GetCpiTenants, UpsertCpiTenant,
     SaveCfIdentity, ListCfOrgs, ListCfSpaces, ExchangeCfPasscode,
     PreviewBootstrap, ApplyBootstrap, GetBootstrapStatus, RetryBootstrap, ResetBootstrap,
-    SelectTmsNode, GetTmsExtensionRoutes, ConfirmTmsExtensionRoutes,
+    SelectTmsNode, GetTmsExtensionRoutes,
     GetTmsExtension, PreviewTmsExtension, ApplyTmsExtension, ResetTmsExtension,
     GetCentralTmsContext, GetTransportNodes,
 } from '@/service/api'
@@ -700,7 +656,6 @@ export default defineComponent({
             const map: Record<TenantLifecycleState, string> = {
                 draft: 'Information',
                 configured: 'Set2',
-                not_ready: 'Critical',
                 readying: 'Information',
                 ready: 'Positive',
             }
@@ -709,11 +664,9 @@ export default defineComponent({
         tmsExtensionDesign(): string {
             const map: Record<TmsExtensionState, string> = {
                 not_started: 'Neutral',
-                node_pending: 'Information',
                 node_confirmed: 'Set2',
                 bootstrapping: 'Information',
                 bootstrapped: 'Positive',
-                bootstrap_failed: 'Critical',
             }
             return map[this.selectedCpiTenant.TmsExtensionState] ?? 'Neutral'
         },
@@ -790,9 +743,9 @@ export default defineComponent({
             this.tmsExtension = null
             this.tmsChangeNode = false
             this.tmsCardMessage = null
-            // Step derivation: draft → 1; configured/not_ready → 2; readying/ready → 3
+            // Step derivation: draft → 1; configured → 2; readying/ready → 3
             this.wizardStep = row.LifecycleState === 'draft' ? 1
-                : (['configured', 'not_ready'].includes(row.LifecycleState) ? 2 : 3)
+                : (row.LifecycleState === 'configured' ? 2 : 3)
             this.showManageModal = true
             await this.refreshSelectedTenant()
             await this.loadBootstrapJob()
@@ -1084,22 +1037,6 @@ export default defineComponent({
                 await this.loadTmsExtension()
             } catch (e: any) {
                 this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'Node selection failed' }
-            } finally {
-                this.tmsLoading = false
-            }
-        },
-        async onConfirmRoutes() {
-            this.tmsLoading = true
-            this.tmsCardMessage = null
-            try {
-                const res = await ConfirmTmsExtensionRoutes(this.selectedCpiTenant.ID)
-                this.tmsRoutes = res.routes || []
-                await this.refreshSelectedTenant()
-                await this.loadTmsExtension()
-                this.tmsCardMessage = { type: 'Positive', text: 'Routes confirmed — ready for TMS bootstrap.' }
-                window.$toast.success('TMS routes confirmed')
-            } catch (e: any) {
-                this.tmsCardMessage = { type: 'Negative', text: e?.message ?? 'Confirm failed' }
             } finally {
                 this.tmsLoading = false
             }

@@ -78,7 +78,7 @@ export interface Condition {
   Timestamp: string
 }
 
-export type TenantLifecycleState = 'draft' | 'configured' | 'not_ready' | 'readying' | 'ready'
+export type TenantLifecycleState = 'draft' | 'configured' | 'readying' | 'ready'
 export type PrerequisiteStatus = 'missing' | 'ready' | 'failed' | 'registering'
 export type BootstrapJobState = 'running' | 'waiting_user_action' | 'partially_applied' | 'failed' | 'finished'
 export type BootstrapJobType = 'preview' | 'apply' | 'retry'
@@ -86,7 +86,7 @@ export type BootstrapFailureType = 'waiting_user_action' | 'permission_blocked' 
 export type BootstrapLayer = 'BASE' | 'TMS' | ''
 
 // RFC 032 P0: TMS Extension State
-export type TmsExtensionState = 'not_started' | 'node_pending' | 'node_confirmed' | 'bootstrapping' | 'bootstrapped' | 'bootstrap_failed'
+export type TmsExtensionState = 'not_started' | 'node_confirmed' | 'bootstrapping' | 'bootstrapped'
 
 export interface CpiTenant {
   ID: number
@@ -178,11 +178,6 @@ export interface TmsExtensionOverview {
 
 export interface TmsRoutesResponse {
   nodeName: string
-  routes: TransportRoute[]
-}
-
-export interface TmsConfirmResponse {
-  tmsExtensionState: TmsExtensionState
   routes: TransportRoute[]
 }
 

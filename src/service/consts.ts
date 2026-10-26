@@ -95,7 +95,6 @@ export const cpiTenantColums: Column[] = [
       const designMap: Record<TenantLifecycleState, string> = {
         draft: 'Information',
         configured: 'Set2',
-        not_ready: 'Critical',
         readying: 'Information',
         ready: 'Positive',
       }
@@ -112,11 +111,9 @@ export const cpiTenantColums: Column[] = [
       if (state === 'not_started') return h('div', '—')
       const designMap: Record<TmsExtensionState, string> = {
         not_started: 'Neutral',
-        node_pending: 'Information',
         node_confirmed: 'Set2',
         bootstrapping: 'Information',
         bootstrapped: 'Positive',
-        bootstrap_failed: 'Critical',
       }
       return h('ui5-tag', { design: designMap[state] ?? 'Neutral', style: 'font-size: 0.75rem' }, state)
     }

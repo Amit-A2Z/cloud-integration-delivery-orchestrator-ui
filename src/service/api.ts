@@ -1,6 +1,6 @@
 import axios from 'axios'
 import http from './http'
-import type { AnsStatus, ApiEndpoint, Artifact, ArtifactTenantOperation, AppCount, BackfillTechIDResult, BootstrapJob, BootstrapPreview, CentralTmsContext, ConnectivityStatus, CpiTenant, CreateDRFromMismatchRequest, CreateDRFromMismatchResponse, DeliverOpRequest, DeliveryRequest, DeliveryRule, GenerateTRResponse, GitOwnerInfo, GitRepoConfig, GitRepoInfo, JiraConfig, NodeTransportRequest, OperationCondition, OperationsHistoryFilters, OperationsHistoryResponse, Package, PreviewDRResponse, RuntimeArtifact, TmsConfirmResponse, TmsExtensionOverview, TmsRoutesResponse, TransportNode, TransportRoute, TriggerResult, UserInfo, VersionCompareIncludedPackage, VersionCompareResponse, VersionCompareSummaryItem } from './model'
+import type { AnsStatus, ApiEndpoint, Artifact, ArtifactTenantOperation, AppCount, BackfillTechIDResult, BootstrapJob, BootstrapPreview, CentralTmsContext, ConnectivityStatus, CpiTenant, CreateDRFromMismatchRequest, CreateDRFromMismatchResponse, DeliverOpRequest, DeliveryRequest, DeliveryRule, GenerateTRResponse, GitOwnerInfo, GitRepoConfig, GitRepoInfo, JiraConfig, NodeTransportRequest, OperationCondition, OperationsHistoryFilters, OperationsHistoryResponse, Package, PreviewDRResponse, RuntimeArtifact, TmsExtensionOverview, TmsRoutesResponse, TransportNode, TransportRoute, TriggerResult, UserInfo, VersionCompareIncludedPackage, VersionCompareResponse, VersionCompareSummaryItem } from './model'
 import type { AggregateStatus, DeployState, ImportState, RequestState } from './statuses'
 
 export const GetDrCounts = () => {
@@ -319,10 +319,6 @@ export const SelectTmsNode = (tenantId: number, payload: { nodeId: number; nodeN
 
 export const GetTmsExtensionRoutes = (tenantId: number) => {
   return http.get(`/api/v1/cpiTenant/${tenantId}/tms-extension/routes`) as Promise<TmsRoutesResponse>
-}
-
-export const ConfirmTmsExtensionRoutes = (tenantId: number) => {
-  return http.post(`/api/v1/cpiTenant/${tenantId}/tms-extension/confirm`, {}) as Promise<TmsConfirmResponse>
 }
 
 export const PreviewTmsExtension = (tenantId: number, cfToken: string) => {

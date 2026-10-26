@@ -86,7 +86,7 @@ const doSaveTmsContext = async () => {
     tmsContext.value = result
     const affected = result.affectedTenants ?? 0
     if (affected > 0) {
-      window.$toast.warning(`Central TMS context saved — ${affected} tenant(s) marked as TMS bootstrap_failed and need re-apply.`)
+      window.$toast.warning(`Central TMS context saved — ${affected} tenant(s) reset to not_started and need re-select node + re-apply.`)
     } else {
       window.$toast.success('Central TMS context saved')
     }
@@ -250,7 +250,7 @@ onMounted(async () => {
     <div class="sc-dialog-content">
       <ui5-message-strip design="Critical" hide-close-button style="margin-bottom: 1rem;">
         Changing the TMS API destination will invalidate {{ tmsBootstrappedCount }} TMS-ready tenant(s).
-        They will be marked as <strong>bootstrap_failed</strong> and must be re-applied individually.
+        They will be reset to <strong>not_started</strong> (node cleared) and must re-select node + re-apply individually.
       </ui5-message-strip>
       <ui5-text>
         Current: <strong>{{ tmsContext?.TmsApiDestinationName }}</strong><br />
